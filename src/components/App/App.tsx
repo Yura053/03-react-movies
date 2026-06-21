@@ -1,57 +1,64 @@
-import { useState } from 'react';
-import './App.module.css'; 
-import SearchBar from '../SearchBar/SearchBar';
-import toast, { Toaster } from 'react-hot-toast';
-import fetchMovies from '../../services/movieService';
-import type { Movie } from '../../types/movie';
-import MovieGrid from '../MovieGrid/MovieGrid';
-import Loader from '../Loader/Loader';
-import ErrorMessage from '../ErrorMessage/ErrorMessage';
-import MovieModal from '../MovieModal/MovieModal';
+import { useState } from "react";
+import css from "./App.module.css";
+import "modern-normalize";
+import fetchMovies from "../../services/movieService";
+import type { Movie } from "../../types/movie";
+import SearchBar from "../SearchBar/SearchBar";
+import toast, { Toaster } from "react-hot-toast";
+import MovieGrid from "../MovieGrid/MovieGrid";
+import Loader from "../Loader/Loader";
+import ErrorMessage from "../ErrorMessage/ErrorMessage";
+import MovieModal from "../MovieModal/MovieModal";
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadError, setIsLoadError] = useState<boolean>(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const onSubmit = async (query: string) => {
-    try {
-      setIsLoading(true);
-      setIsError(false);
-      setMovies([]);
-      const results = await fetchMovies(query);
+  const handleSubmit = (input: string) => {
+    setMovies([]);
+    setIsLoading(true);
+    setIsLoadError(false);
 
-      if (results.length === 0) {
-        toast('No movies found for your request.');
-        return;
-      }
-
-      setMovies(results);
-    } catch {
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
+    fetchMovies({ page: 1, query: input.trim() })
+      .then((movieResponse) => {
+        if (movieResponse.length === 0) {
+          toast.error("No movies found for your request.");
+          return;
+        }
+        setMovies(movieResponse);
+      })
+      .catch((error) => {
+        toast.error(error.message);
+        setIsLoadError(true);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
-  const onSelect = (movie: Movie) => {
-    setSelectedMovie(movie)
-  }
+  const handleSelect = (movie: Movie) => {
+    setSelectedMovie(movie);
+  };
 
-  const onClose = () => {
+  const handleModalClose = () => {
     setSelectedMovie(null);
   };
 
   return (
-    <>
+    <div className={css.app}>
       <Toaster />
-      <SearchBar onSubmit={onSubmit} />
+      <SearchBar onSubmit={handleSubmit}></SearchBar>
       {isLoading && <Loader />}
-      {isError && <ErrorMessage/>}
-      {movies.length > 0 && <MovieGrid onSelect={onSelect} movies={movies} />}
-      {selectedMovie && <MovieModal movie={selectedMovie} onClose={onClose} />}
-    </>
+      {isLoadError && <ErrorMessage />}
+      {movies.length > 0 && (
+        <MovieGrid onSelect={handleSelect} movies={movies} />
+      )}
+      {selectedMovie !== null && (
+        <MovieModal movie={selectedMovie} onClose={handleModalClose} />
+      )}
+    </div>
   );
 }
 
